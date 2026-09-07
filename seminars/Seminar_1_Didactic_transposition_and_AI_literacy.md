@@ -3,9 +3,19 @@ marp: true
 theme: gaia
 paginate: true
 html: true
+style: |
+  img.ku-logo {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    width: 33%;
+    height: auto;
+  }
+
 ---
 
 <!-- _class: lead -->
+<img class="ku-logo" src="../images/ku_logo.png" alt="KU logo" />
 
 # Didactic Transposition and AI Literacy
 
@@ -130,7 +140,8 @@ Familiar from textbooks and news media:
 - The robot hand touching the human hand
 
 Each one transposes AI into folk psychology.
-Fluent, memorable — and it points students' intuitions in exactly the wrong direction.
+
+Fluent, memorable (click bait) &rarr; and it points peoples' intuitions in exactly the wrong direction.
 
 ---
 

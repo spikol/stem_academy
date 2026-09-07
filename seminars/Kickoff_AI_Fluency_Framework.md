@@ -11,6 +11,7 @@ style: |
     width: 33%;
     height: auto;
   }
+
 ---
 ![bg](../images/army_of_happy_cyborgs.png)
 
@@ -142,3 +143,31 @@ It says: **know which of the five you're doing, and do it on purpose.**
 
 Cards are on the tables. Let's argue about a thermostat.
 
+---
+<!-- _class: lead -->
+
+<style scoped>
+table {
+  font-size: 28px;
+}
+.flow {
+  text-align: center;
+}
+</style>
+
+
+## MAGIC* Operational Approach
+
+<div class="flow">
+
+| Operation | MAGIC    | 5D          | What it means                                                |
+| --------- | -------- | ----------- | ------------------------------------------------------------ |
+| M         | Mission  | Delegation  | What are we trying to achieve, and what should remain human? |
+| A         | Assets   | Data        | What context, evidence and sources are involved?             |
+| G         | Guidance | Description | How do we tell the AI what good looks like?                  |
+| I         | Inspect  | Doubt       | What should we question, check, or verify?                   |
+| C         | Care     | Diligence   | What are we responsible for before and after use?            |
+
+</div>
+
+*MAGIC is a concept fron Ken Friss Larsen

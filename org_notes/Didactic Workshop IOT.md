@@ -2,7 +2,7 @@
 
 1. Reflection - Make time for ««
 
-2. Take home concepts
+2. Take-home concepts
 
 3. Reflection exercise
 
@@ -18,8 +18,14 @@
 | Break                                                        |          |               |
 | Block 3A Presentation of exercises - Microbit                | 15 mins  | Daniel        |
 | Block 3B  Exercises for toolbox - Microbit                   | 30 mins  | Daniel        |
-| Block 3C Group Discussion about new modules - Playful desconstructions | 30 mins  | Daniel & Sara |
+| Block 3C Group Discussion about new modules - Playful deconstructions | 30 mins  | Daniel & Sara |
 | Block 4 Round off                                            | 10 mins  | Sara          |
+
+1. [Teachable machine](https://cardboard.lofirobot.com/teachable-microbit-app-info/) from LoFi Robots TM &rarr; MB
+
+2. Claude - API MB &rarr; Claude
+
+
 
 #### PAPERS
 
@@ -55,7 +61,13 @@
 | 75 minutes | B3 Presentation of exercises(15 m) + Exercises for toolbox (30 m) + Group Discussion about new modules | Researcher + Sara |
 | 10 minutes | B4 Round off                                                 | Sara              |
 
+#### ILOs
 
+**By the end of the course, participants will be able to:**
+
+1. **Explain how AI perceives and responds to the physical world**, using unplugged activities and hands-on work with microcontrollers and sensors.
+2. **Explore generative AI tools in simple sensor-driven systems**, including prompting, querying, and integrating large language models.
+3. **Run playful AI activities in their own teaching** that build critical AI Fluency with their students.
 
 
 

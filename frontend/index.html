@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Micro:bit AI Bridge</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f5f0;
+    --fg: #1c1c1c;
+    --muted: #666;
+    --accent: #b3121b;
+    --panel: #ffffff;
+    --border: #ddd8cd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a;
+      --fg: #eceae5;
+      --muted: #9a9a9a;
+      --accent: #ff5b63;
+      --panel: #1f2124;
+      --border: #333;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  main {
+    width: 100%;
+    max-width: 560px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  p.subtitle {
+    color: var(--muted);
+    margin: 0 0 24px;
+    font-size: 0.95rem;
+  }
+  button {
+    font: inherit;
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #status {
+    margin-top: 16px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  #status.error { color: var(--accent); }
+  #current {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 18px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  #current .row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+  #current .row + .row { margin-top: 8px; }
+  #current .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    flex: 0 0 auto;
+    width: 68px;
+  }
+  #current .value { font-size: 1rem; }
+  #current .emoji { font-size: 1.3rem; margin-right: 6px; }
+  #log {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    max-height: 260px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap;
+  }
+  #log .prompt { color: var(--muted); }
+  #log .reply { color: var(--fg); font-weight: 600; }
+  #log .err { color: var(--accent); }
+  .unsupported {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: rgba(179, 18, 27, 0.1);
+    color: var(--accent);
+    font-size: 0.9rem;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Micro:bit AI Bridge</h1>
+  <p class="subtitle">Plug in your micro:bit, then connect. Prompts sent from the micro:bit are relayed to Claude and the answer is sent back over USB.</p>
+
+  <button id="connect">Connect Micro:bit</button>
+  <div id="status">Status: Disconnected</div>
+  <div id="unsupported" class="unsupported">
+    This browser doesn't support the Web Serial API. Use desktop Chrome or Edge.
+  </div>
+
+  <div id="current">
+    <div class="row"><span class="label">Question</span><span class="value" id="currentQuestion"></span></div>
+    <div class="row"><span class="label">Answer</span><span class="value"><span class="emoji" id="currentEmoji"></span><span id="currentAnswer"></span></span></div>
+  </div>
+
+  <div id="log"></div>
+</main>
+
+<script>
+// LOCAL TEST — point back at your deployed backend before shipping:
+// const SERVER_URL = "https://your-username.pythonanywhere.com/ask-ai";
+const SERVER_URL = "http://127.0.0.1:5050/ask-ai";
+// Must match BRIDGE_SHARED_SECRET on the server. Leave "" if the server has no secret set.
+const BRIDGE_KEY = "MeajwO1UeNgPP6M3aAX8fGdnRdIRpDXc";
+
+// Must exactly match the QUESTIONS list (and order) in
+// dev/microbit_ai_bridge.py — the device only ever sends an index.
+const QUESTIONS = [
+  "Is a thermostat AI?",
+  "Is a calculator AI?",
+  "Is a search engine AI?",
+  "Is ChatGPT AI?",
+  "Is a self-driving car AI?",
+];
+
+const connectBtn = document.getElementById("connect");
+const statusEl = document.getElementById("status");
+const logEl = document.getElementById("log");
+const unsupportedEl = document.getElementById("unsupported");
+const currentEl = document.getElementById("current");
+const currentQuestionEl = document.getElementById("currentQuestion");
+const currentEmojiEl = document.getElementById("currentEmoji");
+const currentAnswerEl = document.getElementById("currentAnswer");
+
+// verdict: true = "yes, this is AI", false = "no", null = unclear/not a yes-no question
+function verdictEmoji(verdict) {
+  if (verdict === true) return "😊";
+  if (verdict === false) return "❌";
+  return "🤔";
+}
+
+// Marker the micro:bit code looks at to pick a face, prepended to the
+// text it writes back over serial: "Y:" / "N:" / "?:".
+function verdictMarker(verdict) {
+  if (verdict === true) return "Y:";
+  if (verdict === false) return "N:";
+  return "?:";
+}
+
+function setStatus(text, isError = false) {
+  statusEl.textContent = "Status: " + text;
+  statusEl.classList.toggle("error", isError);
+}
+
+function logLine(text, cls) {
+  const line = document.createElement("div");
+  line.className = cls;
+  line.textContent = text;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+if (!("serial" in navigator)) {
+  unsupportedEl.style.display = "block";
+  connectBtn.disabled = true;
+}
+
+async function askAI(prompt) {
+  const headers = { "Content-Type": "application/json" };
+  if (BRIDGE_KEY) headers["X-Bridge-Key"] = BRIDGE_KEY;
+
+  const res = await fetch(SERVER_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ prompt }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
+  return { response: data.response, verdict: data.verdict ?? null };
+}
+
+connectBtn.addEventListener("click", async () => {
+  connectBtn.disabled = true;
+  let port, reader, writer;
+
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+    setStatus("Connected");
+
+    const decoder = new TextDecoderStream();
+    const readableClosed = port.readable.pipeTo(decoder.writable);
+    reader = decoder.readable.getReader();
+    writer = port.writable.getWriter();
+
+    let buffer = "";
+    let lastRequestAt = 0;
+    const DEBOUNCE_MS = 3000; // device sends each request 3x over ~90ms
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      buffer += value;
+      // Flaky USB serial on this hardware occasionally merges/drops a
+      // stray byte across message boundaries (e.g. a delayed trailing
+      // newline from the previous message), so look for "Q<digit>"
+      // anywhere in the line rather than requiring an exact whole-line
+      // match. Also cap unbounded growth if a newline never arrives.
+      if (buffer.length > 200) buffer = buffer.slice(-200);
+      let newlineIndex;
+      while ((newlineIndex = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+
+        const match = line.match(/Q(\d)/);
+        if (!match) continue;
+
+        const prompt = QUESTIONS[Number(match[1])];
+        if (!prompt) continue;
+
+        const now = Date.now();
+        if (now - lastRequestAt < DEBOUNCE_MS) continue;
+        lastRequestAt = now;
+
+        logLine("> " + prompt, "prompt");
+        setStatus("Sending prompt to cloud AI...");
+
+        currentEl.style.display = "block";
+        currentQuestionEl.textContent = prompt;
+        currentEmojiEl.textContent = "…";
+        currentAnswerEl.textContent = "thinking";
+
+        try {
+          const { response, verdict } = await askAI(prompt);
+          currentEmojiEl.textContent = verdictEmoji(verdict);
+          currentAnswerEl.textContent = response;
+          logLine(verdictEmoji(verdict) + " " + response, "reply");
+
+          const payload = verdictMarker(verdict) + response;
+          await writer.write(new TextEncoder().encode(payload + "\n"));
+          setStatus("Response sent to micro:bit");
+        } catch (err) {
+          currentEmojiEl.textContent = "⚠️";
+          currentAnswerEl.textContent = err.message;
+          logLine("Error: " + err.message, "err");
+          setStatus("Request failed: " + err.message, true);
+        }
+      }
+    }
+  } catch (err) {
+    setStatus("Error: " + err.message, true);
+  } finally {
+    connectBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
