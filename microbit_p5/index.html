@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Micro:bit Mood Narrator</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --border:         rgba(11,11,11,0.10);
+    --accent:         #2a78d6;
+    --series-temp:    #eda100;
+    --series-motion:  #1baf7a;
+    --persona-a:      #2a78d6;
+    --persona-b:      #eb6834;
+    --danger:         #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --border:         rgba(255,255,255,0.10);
+      --accent:         #3987e5;
+      --series-temp:    #c98500;
+      --series-motion:  #199e70;
+      --persona-a:      #3987e5;
+      --persona-b:      #d95926;
+      --danger:         #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --border:         rgba(255,255,255,0.10);
+    --accent:         #3987e5;
+    --series-temp:    #c98500;
+    --series-motion:  #199e70;
+    --persona-a:      #3987e5;
+    --persona-b:      #d95926;
+    --danger:         #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px 48px;
+  }
+  main { max-width: 760px; margin: 0 auto; }
+
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.subtitle { color: var(--text-secondary); margin: 0 0 20px; font-size: 0.95rem; }
+
+  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--text-primary); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #status { font-size: 0.9rem; color: var(--text-secondary); }
+  #status.error { color: var(--danger); }
+  #unsupported {
+    display: none;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: var(--danger);
+    font-size: 0.9rem;
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .tile .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tile .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .tile .value {
+    margin-top: 6px;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .tile .value .unit { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
+  .tile canvas { display: block; width: 100%; height: 40px; margin-top: 10px; }
+
+  .tile.state .value { display: flex; align-items: center; gap: 8px; font-size: 1.3rem; }
+  .tile.state .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--gridline); flex: none; }
+  #personaTile.a .dot { background: var(--persona-a); }
+  #personaTile.b .dot { background: var(--persona-b); }
+  .tile .hint { margin-top: 4px; font-size: 0.75rem; color: var(--text-muted); }
+
+  .narration-panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .narration-panel .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .narration {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    min-height: 3.2em;
+    margin-top: 8px;
+  }
+
+  details.key-panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+  details.key-panel summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+  .key-body { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
+  .muted { font-size: 0.85rem; color: var(--text-muted); }
+  .btn-row { display: flex; gap: 8px; }
+  select, input[type="text"], input[type="password"] {
+    background: var(--page);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-size: 0.88rem;
+    width: 100%;
+  }
+  .readout {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: pre;
+  }
+  .fineprint { font-size: 0.76rem; color: var(--text-muted); line-height: 1.45; margin: 4px 0 0; }
+  .fineprint a { color: var(--accent); }
+
+  .table-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    padding: 0;
+    cursor: pointer;
+  }
+  #tableWrap { display: none; margin-top: 12px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td {
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  td.t { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Micro:bit Mood Narrator</h1>
+  <p class="subtitle">Temperature and motion stream from a micro:bit over Bluetooth; Claude narrates the room in character. Press <strong>Button A</strong> for the nervous houseplant, <strong>Button B</strong> for the small monkey.</p>
+
+  <div id="unsupported">
+    This browser doesn't support Web Bluetooth. Use desktop Chrome or Edge.
+  </div>
+
+  <div class="controls">
+    <button id="connect">Connect Micro:bit</button>
+    <span id="status">Status: Disconnected</span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="label"><span class="swatch" style="background:var(--series-temp)"></span>Temperature</div>
+      <div class="value"><span id="tempValue">–</span><span class="unit">°C</span></div>
+      <canvas id="tempChart"></canvas>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="swatch" style="background:var(--series-motion)"></span>Motion</div>
+      <div class="value"><span id="motionValue">–</span></div>
+      <canvas id="motionChart"></canvas>
+    </div>
+    <div class="tile state a" id="personaTile">
+      <div class="label"><span class="swatch" style="background:var(--persona-a)"></span>Persona</div>
+      <div class="value"><span class="dot"></span><span id="personaValue">Nervous houseplant</span></div>
+      <div class="hint">Button A = houseplant · Button B = monkey</div>
+    </div>
+  </div>
+
+  <div class="narration-panel">
+    <div class="label">Narration</div>
+    <div class="narration" id="narration">Connect the micro:bit, then press a button — it reads automatically every few seconds once connected.</div>
+  </div>
+
+  <details class="key-panel">
+    <summary>Claude API key &amp; usage</summary>
+    <div class="key-body">
+      <div class="muted">Your Claude API key (stored only in this browser)</div>
+      <input type="password" id="key-input" placeholder="sk-ant-..." autocomplete="off" />
+      <div class="btn-row">
+        <button id="key-save-btn">Save key</button>
+        <button id="key-clear-btn" class="secondary">Clear key</button>
+      </div>
+      <div class="readout" id="key-status">No key saved.</div>
+
+      <label for="budget-input" class="muted" style="margin-top:6px">Session budget cap (USD, optional)</label>
+      <input type="text" id="budget-input" value="0.50" />
+      <div class="readout" id="usage-readout">0 calls this session · $0.0000 spent</div>
+
+      <p class="fineprint">
+        Talks to Anthropic's API straight from your browser — no server in between.
+        Use a separate, spend-limited key from
+        <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>,
+        not your main one: anyone with access to this browser (devtools, a shared machine) can
+        read it back out of local storage. Click &ldquo;Clear key&rdquo; before handing off a
+        shared laptop.
+      </p>
+    </div>
+  </details>
+
+  <button class="table-toggle" id="tableToggle">Show data table</button>
+  <div id="tableWrap">
+    <table>
+      <thead><tr><th>Time</th><th>Temp (°C)</th><th>Motion</th><th>Persona</th><th>Narration</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+// Official BBC micro:bit Bluetooth Profile services — see
+// ../bluetooth_stream/README.md for why these (not a custom UART string)
+// and for the clean-connection-state routine if this fails to connect.
+const ACCEL_SERVICE = "e95d0753-251d-470a-a062-fa1922dfa9a8";
+const ACCEL_DATA = "e95dca4b-251d-470a-a062-fa1922dfa9a8"; // Notify — X,Y,Z int16 LE, milli-g
+const TEMP_SERVICE = "e95d6100-251d-470a-a062-fa1922dfa9a8";
+const TEMP_DATA = "e95d9250-251d-470a-a062-fa1922dfa9a8"; // Notify — int8, °C
+const BUTTON_SERVICE = "e95d9882-251d-470a-a062-fa1922dfa9a8";
+const BUTTON_A_DATA = "e95dda90-251d-470a-a062-fa1922dfa9a8"; // Notify — uint8: 0/1/2
+const BUTTON_B_DATA = "e95dda91-251d-470a-a062-fa1922dfa9a8";
+
+const PERSONAS = {
+  A: { label: "Nervous houseplant", cls: "a", system: "a nervous houseplant reacting anxiously to its environment" },
+  B: { label: "Small monkey", cls: "b", system: "a small, easily excited monkey reacting playfully and curiously to its environment" },
+};
+
+const TEMP_LEVELS = [
+  { max: 18, label: "cold" },
+  { max: 24, label: "cool" },
+  { max: 30, label: "warm" },
+  { max: Infinity, label: "hot" },
+];
+const MOTION_LEVELS = [
+  { max: 30, label: "still" },
+  { max: 150, label: "moving" },
+  { max: Infinity, label: "shaking" },
+];
+
+const AUTO_READ_MS = 2000;
+const HISTORY_LEN = 60;
+const TABLE_MAX_ROWS = 30;
+
+const connectBtn = document.getElementById("connect");
+const statusEl = document.getElementById("status");
+const unsupportedEl = document.getElementById("unsupported");
+const tableToggle = document.getElementById("tableToggle");
+const tableWrap = document.getElementById("tableWrap");
+const tableBody = document.getElementById("tableBody");
+const personaTile = document.getElementById("personaTile");
+const personaValueEl = document.getElementById("personaValue");
+const narrationEl = document.getElementById("narration");
+
+const metrics = {
+  temp: { valueEl: document.getElementById("tempValue"), canvas: document.getElementById("tempChart"), color: "--series-temp", history: [] },
+  motion: { valueEl: document.getElementById("motionValue"), canvas: document.getElementById("motionChart"), color: "--series-motion", history: [] },
+};
+
+let currentPersona = "A";
+let prevVec = null;
+let latestTemp = null;
+let latestMotion = 0;
+let lastRow = { temp: "", motion: "", persona: PERSONAS.A.label, narration: "" };
+let lastReadAt = 0;
+let busy = false;
+
+if (!("bluetooth" in navigator)) {
+  unsupportedEl.style.display = "block";
+  connectBtn.disabled = true;
+}
+
+function setStatus(text, isError = false) {
+  statusEl.textContent = "Status: " + text;
+  statusEl.classList.toggle("error", isError);
+}
+
+function pushHistory(metric, value) {
+  metric.history.push(value);
+  if (metric.history.length > HISTORY_LEN) metric.history.shift();
+}
+
+function drawSparkline(metric) {
+  const canvas = metric.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(rect.width, 1);
+  const h = Math.max(rect.height, 1);
+  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const data = metric.history;
+  if (data.length < 2) return;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = max - min || 1;
+  const pad = 4;
+
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+    return [x, y];
+  });
+
+  const color = getComputedStyle(document.documentElement).getPropertyValue(metric.color).trim();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.stroke();
+
+  const [lastX, lastY] = points[points.length - 1];
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function addTableRow() {
+  const row = document.createElement("tr");
+  const time = new Date().toLocaleTimeString();
+  row.innerHTML = `<td class="t">${time}</td><td>${lastRow.temp}</td><td>${lastRow.motion}</td><td>${lastRow.persona}</td><td>${lastRow.narration}</td>`;
+  tableBody.insertBefore(row, tableBody.firstChild);
+  while (tableBody.children.length > TABLE_MAX_ROWS) {
+    tableBody.removeChild(tableBody.lastChild);
+  }
+}
+
+tableToggle.addEventListener("click", () => {
+  const showing = tableWrap.style.display === "block";
+  tableWrap.style.display = showing ? "none" : "block";
+  tableToggle.textContent = showing ? "Show data table" : "Hide data table";
+});
+
+function tempLevel(v) { return TEMP_LEVELS.find((l) => v <= l.max).label; }
+function motionLevel(v) { return MOTION_LEVELS.find((l) => v <= l.max).label; }
+
+function setPersona(key) {
+  if (currentPersona === key) return;
+  currentPersona = key;
+  const persona = PERSONAS[key];
+  personaTile.classList.remove("a", "b");
+  personaTile.classList.add(persona.cls);
+  personaValueEl.textContent = persona.label;
+  lastRow.persona = persona.label;
+  requestNarrationNow();
+}
+
+function handleAccel(dv) {
+  const x = dv.getInt16(0, true);
+  const y = dv.getInt16(2, true);
+  const z = dv.getInt16(4, true);
+  if (prevVec) {
+    const dx = x - prevVec.x, dy = y - prevVec.y, dz = z - prevVec.z;
+    latestMotion = Math.round(Math.sqrt(dx * dx + dy * dy + dz * dz));
+    metrics.motion.valueEl.textContent = latestMotion;
+    pushHistory(metrics.motion, latestMotion);
+    drawSparkline(metrics.motion);
+    lastRow.motion = latestMotion;
+  }
+  prevVec = { x, y, z };
+  setStatus("Streaming");
+}
+
+function handleTemp(dv) {
+  latestTemp = dv.getInt8(0);
+  metrics.temp.valueEl.textContent = latestTemp;
+  pushHistory(metrics.temp, latestTemp);
+  drawSparkline(metrics.temp);
+  lastRow.temp = latestTemp;
+  setStatus("Streaming");
+}
+
+function handleButton(which, dv) {
+  const state = dv.getUint8(0);
+  if (state === 1 || state === 2) setPersona(which); // pressed or held
+}
+
+async function subscribe(server, serviceUuid, charUuid, handler) {
+  const service = await server.getPrimaryService(serviceUuid);
+  const char = await service.getCharacteristic(charUuid);
+  char.addEventListener("characteristicvaluechanged", (event) => handler(event.target.value));
+  await char.startNotifications();
+}
+
+connectBtn.addEventListener("click", async () => {
+  connectBtn.disabled = true;
+  try {
+    setStatus("Requesting device...");
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "BBC micro:bit" }],
+      optionalServices: [ACCEL_SERVICE, TEMP_SERVICE, BUTTON_SERVICE],
+    });
+
+    device.addEventListener("gattserverdisconnected", () => {
+      setStatus("Disconnected", true);
+      connectBtn.disabled = false;
+    });
+
+    setStatus("Connecting to GATT server...");
+    const server = await device.gatt.connect();
+
+    setStatus("Subscribing to Accelerometer service...");
+    await subscribe(server, ACCEL_SERVICE, ACCEL_DATA, handleAccel);
+
+    setStatus("Subscribing to Temperature service...");
+    await subscribe(server, TEMP_SERVICE, TEMP_DATA, handleTemp);
+
+    setStatus("Subscribing to Button service...");
+    await subscribe(server, BUTTON_SERVICE, BUTTON_A_DATA, (dv) => handleButton("A", dv));
+    await subscribe(server, BUTTON_SERVICE, BUTTON_B_DATA, (dv) => handleButton("B", dv));
+
+    setStatus("Connected to " + (device.name || "micro:bit") + " — waiting for first reading...");
+  } catch (err) {
+    setStatus(statusEl.textContent.replace(/^Status: /, "") + " -> FAILED: " + err.message, true);
+  } finally {
+    connectBtn.disabled = false;
+  }
+});
+
+window.addEventListener("resize", () => {
+  Object.values(metrics).forEach(drawSparkline);
+});
+
+// ---------- Claude call (bring your own key, direct to Anthropic) ----------
+
+const STORAGE_KEY = "novo_playful_ai_claude_key";
+const MODEL = "claude-haiku-4-5";
+const PRICE_INPUT_PER_MTOK = 1.0; // USD per 1M input tokens, claude-haiku-4-5
+const PRICE_OUTPUT_PER_MTOK = 5.0; // USD per 1M output tokens, claude-haiku-4-5
+
+let apiKey = localStorage.getItem(STORAGE_KEY) || "";
+let sessionCalls = 0;
+let sessionSpend = 0;
+
+const keyInput = document.getElementById("key-input");
+const keySaveBtn = document.getElementById("key-save-btn");
+const keyClearBtn = document.getElementById("key-clear-btn");
+const keyStatusEl = document.getElementById("key-status");
+const budgetInput = document.getElementById("budget-input");
+const usageEl = document.getElementById("usage-readout");
+
+function refreshKeyStatus() {
+  if (apiKey) {
+    keyStatusEl.textContent = `Key saved (••••${apiKey.slice(-4)})`;
+    keyInput.value = "";
+    keyInput.placeholder = "Key is saved — clear it to change";
+  } else {
+    keyStatusEl.textContent = "No key saved.";
+    keyInput.placeholder = "sk-ant-...";
+  }
+}
+
+function saveKey() {
+  const v = keyInput.value.trim();
+  if (!v) return;
+  apiKey = v;
+  localStorage.setItem(STORAGE_KEY, apiKey);
+  refreshKeyStatus();
+  if (!v.startsWith("sk-ant-")) {
+    keyStatusEl.textContent += " — doesn't look like an Anthropic key (should start with \"sk-ant-\"), saved anyway";
+  }
+}
+
+function clearKey() {
+  apiKey = "";
+  localStorage.removeItem(STORAGE_KEY);
+  refreshKeyStatus();
+}
+
+function refreshUsage() {
+  usageEl.textContent =
+    `${sessionCalls} call${sessionCalls === 1 ? "" : "s"} this session · ` +
+    `$${sessionSpend.toFixed(4)} spent (from actual token usage)`;
+}
+
+function getBudgetCap() {
+  const v = parseFloat(budgetInput.value);
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+keySaveBtn.addEventListener("click", saveKey);
+keyClearBtn.addEventListener("click", clearKey);
+refreshKeyStatus();
+refreshUsage();
+
+async function claudeRequest(system, message, max_tokens) {
+  if (!apiKey) {
+    throw new Error('No API key saved — open "Claude API key & usage" and click "Save key".');
+  }
+  const cap = getBudgetCap();
+  if (cap !== null && sessionSpend >= cap) {
+    throw new Error(`Session budget cap ($${cap.toFixed(2)}) reached. Raise the cap above to continue.`);
+  }
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens,
+      system,
+      messages: [{ role: "user", content: message }],
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `Request failed (HTTP ${res.status})`);
+  }
+  if (data.usage) {
+    sessionSpend +=
+      (data.usage.input_tokens / 1e6) * PRICE_INPUT_PER_MTOK +
+      (data.usage.output_tokens / 1e6) * PRICE_OUTPUT_PER_MTOK;
+  }
+  sessionCalls += 1;
+  refreshUsage();
+
+  return data.content?.[0]?.text || "(no response)";
+}
+
+async function requestNarrationNow() {
+  if (busy || latestTemp === null) return;
+  busy = true;
+  lastReadAt = millisNow();
+
+  const persona = PERSONAS[currentPersona];
+  const tLabel = tempLevel(latestTemp);
+  const mLabel = motionLevel(latestMotion);
+
+  const system =
+    `You are ${persona.system}. You will be given raw micro:bit sensor ` +
+    `readings: a temperature in Celsius with a plain-language label, and ` +
+    `an acceleration-based motion score (higher = more recent movement) ` +
+    `with its own plain-language label. Respond with exactly one short ` +
+    `in-character sentence narrating what's happening around the ` +
+    `micro:bit right now. No preamble, no labels, just the sentence.`;
+
+  const message = `temperature: ${latestTemp}°C (${tLabel}), motion: ${latestMotion} (${mLabel})`;
+
+  try {
+    const text = await claudeRequest(system, message, 80);
+    narrationEl.textContent = text;
+    lastRow.narration = text;
+  } catch (err) {
+    narrationEl.textContent = `Error: ${err.message}`;
+    lastRow.narration = `Error: ${err.message}`;
+  } finally {
+    busy = false;
+    addTableRow();
+  }
+}
+
+function millisNow() { return performance.now(); }
+
+setInterval(() => {
+  if (latestTemp === null) return;
+  if (millisNow() - lastReadAt > AUTO_READ_MS && !busy) {
+    requestNarrationNow();
+  }
+}, 500);
+</script>
+</body>
+</html>
