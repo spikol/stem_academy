@@ -27,9 +27,9 @@ physical micro:bit, no install required.
 
 - **AI bridge** (micro:bit asks Claude a yes/no question over USB): see
   [`backend/README.md`](backend/README.md) and
-  [`frontend/README.md`](frontend/README.md)
-  ([live](https://spikol.github.io/stem_academy/frontend/) — needs
-  `backend/` deployed and `SERVER_URL` pointed at it first).
+  [`frontend/README.md`](frontend/README.md). Not linked from the live
+  site — it needs `backend/` deployed and `SERVER_URL` pointed at it
+  before it's actually usable.
 - **Live sensor dashboard**: see [`serial_stream/README.md`](serial_stream/README.md)
   (USB) or [`bluetooth_stream/README.md`](bluetooth_stream/README.md)
   (Bluetooth,
