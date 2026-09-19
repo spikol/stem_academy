@@ -2,4 +2,5 @@
 backend/.env
 backend/venv/
 backend/__pycache__/
+bluetooth_stream/venv/
 __pycache__/

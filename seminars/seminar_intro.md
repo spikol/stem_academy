@@ -27,7 +27,7 @@ DIKU and Center for Digital Education
 
 ---
 ## Today's Agenda
-1. Introductions
+1. Introduction
 2. Activitiy – Is it AI?
 3. Mini Seminar - Didactic Transposition and AI Literacy
 4. Microbit &rarr; Teacable Machine and Claude
@@ -47,3 +47,8 @@ DIKU and Center for Digital Education
 1. Who you are?
 2. What do want from this morning
 
+---
+## Why Playful?
+1. Playful Learning
+2. Curiosity
+3. Tinkering, Hacking, & Creativity

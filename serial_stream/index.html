@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Micro:bit Serial Stream</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --border:         rgba(11,11,11,0.10);
+    --accent:         #2a78d6;
+    --series-light:   #2a78d6;
+    --series-sound:   #eb6834;
+    --series-accel:   #1baf7a;
+    --danger:         #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --border:         rgba(255,255,255,0.10);
+      --accent:         #3987e5;
+      --series-light:   #3987e5;
+      --series-sound:   #d95926;
+      --series-accel:   #199e70;
+      --danger:         #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --border:         rgba(255,255,255,0.10);
+    --accent:         #3987e5;
+    --series-light:   #3987e5;
+    --series-sound:   #d95926;
+    --series-accel:   #199e70;
+    --danger:         #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px 48px;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.subtitle { color: var(--text-secondary); margin: 0 0 20px; font-size: 0.95rem; }
+
+  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--text-primary); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #status { font-size: 0.9rem; color: var(--text-secondary); }
+  #status.error { color: var(--danger); }
+  #unsupported {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: var(--danger);
+    font-size: 0.9rem;
+    display: none;
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .tile .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tile .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .tile .value {
+    margin-top: 6px;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .tile .value .unit { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
+  .tile canvas { display: block; width: 100%; height: 40px; margin-top: 10px; }
+
+  .table-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    padding: 0;
+    cursor: pointer;
+  }
+  #tableWrap { display: none; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td {
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gridline);
+    font-variant-numeric: tabular-nums;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  td.t { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Micro:bit Serial Stream</h1>
+  <p class="subtitle">Plots light, sound, and acceleration streamed from a micro:bit over a USB serial connection.</p>
+
+  <div id="unsupported">
+    This browser doesn't support the Web Serial API. Use desktop Chrome or Edge.
+  </div>
+
+  <div class="controls">
+    <button id="connect">Connect Micro:bit</button>
+    <span id="status">Status: Disconnected</span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="label"><span class="swatch" style="background:var(--series-light)"></span>Light level</div>
+      <div class="value"><span id="lightValue">–</span><span class="unit">/ 255</span></div>
+      <canvas id="lightChart"></canvas>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="swatch" style="background:var(--series-sound)"></span>Sound level</div>
+      <div class="value"><span id="soundValue">–</span><span class="unit">/ 255</span></div>
+      <canvas id="soundChart"></canvas>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="swatch" style="background:var(--series-accel)"></span>Acceleration</div>
+      <div class="value"><span id="accelValue">–</span><span class="unit">mg</span></div>
+      <canvas id="accelChart"></canvas>
+    </div>
+  </div>
+
+  <button class="table-toggle" id="tableToggle">Show data table</button>
+  <div id="tableWrap">
+    <table>
+      <thead><tr><th>Time</th><th>Light</th><th>Sound</th><th>Accel (mg)</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+// Must match serial.setBaudRate(...) in the micro:bit script.
+const BAUD_RATE = 115200;
+
+const HISTORY_LEN = 60;
+const TABLE_MAX_ROWS = 30;
+
+const connectBtn = document.getElementById("connect");
+const statusEl = document.getElementById("status");
+const unsupportedEl = document.getElementById("unsupported");
+const tableToggle = document.getElementById("tableToggle");
+const tableWrap = document.getElementById("tableWrap");
+const tableBody = document.getElementById("tableBody");
+
+const metrics = {
+  light: { valueEl: document.getElementById("lightValue"), canvas: document.getElementById("lightChart"), color: "--series-light", history: [] },
+  sound: { valueEl: document.getElementById("soundValue"), canvas: document.getElementById("soundChart"), color: "--series-sound", history: [] },
+  accel: { valueEl: document.getElementById("accelValue"), canvas: document.getElementById("accelChart"), color: "--series-accel", history: [] },
+};
+
+if (!("serial" in navigator)) {
+  unsupportedEl.style.display = "block";
+  connectBtn.disabled = true;
+}
+
+function setStatus(text, isError = false) {
+  statusEl.textContent = "Status: " + text;
+  statusEl.classList.toggle("error", isError);
+}
+
+function pushHistory(metric, value) {
+  metric.history.push(value);
+  if (metric.history.length > HISTORY_LEN) metric.history.shift();
+}
+
+function drawSparkline(metric) {
+  const canvas = metric.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(rect.width, 1);
+  const h = Math.max(rect.height, 1);
+  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const data = metric.history;
+  if (data.length < 2) return;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = max - min || 1;
+  const pad = 4;
+
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+    return [x, y];
+  });
+
+  const color = getComputedStyle(document.documentElement).getPropertyValue(metric.color).trim();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.stroke();
+
+  const [lastX, lastY] = points[points.length - 1];
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function addTableRow(light, sound, accel) {
+  const row = document.createElement("tr");
+  const time = new Date().toLocaleTimeString();
+  row.innerHTML = `<td class="t">${time}</td><td>${light}</td><td>${sound}</td><td>${accel}</td>`;
+  tableBody.insertBefore(row, tableBody.firstChild);
+  while (tableBody.children.length > TABLE_MAX_ROWS) {
+    tableBody.removeChild(tableBody.lastChild);
+  }
+}
+
+tableToggle.addEventListener("click", () => {
+  const showing = tableWrap.style.display === "block";
+  tableWrap.style.display = showing ? "none" : "block";
+  tableToggle.textContent = showing ? "Show data table" : "Hide data table";
+});
+
+function handleReading(light, sound, accel) {
+  metrics.light.valueEl.textContent = light;
+  metrics.sound.valueEl.textContent = sound;
+  metrics.accel.valueEl.textContent = accel;
+
+  pushHistory(metrics.light, light);
+  pushHistory(metrics.sound, sound);
+  pushHistory(metrics.accel, accel);
+
+  drawSparkline(metrics.light);
+  drawSparkline(metrics.sound);
+  drawSparkline(metrics.accel);
+
+  addTableRow(light, sound, accel);
+}
+
+function parseLine(line) {
+  // Expected: "<light>,<sound>,<accel>"
+  const match = line.trim().match(/^(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)$/);
+  if (!match) return false;
+  const [, light, sound, accel] = match.map(Number);
+  handleReading(light, sound, accel);
+  return true;
+}
+
+connectBtn.addEventListener("click", async () => {
+  connectBtn.disabled = true;
+  let port, reader;
+
+  try {
+    setStatus("Requesting port...");
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: BAUD_RATE });
+    setStatus("Streaming");
+
+    const decoder = new TextDecoderStream();
+    port.readable.pipeTo(decoder.writable);
+    reader = decoder.readable.getReader();
+
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      buffer += value;
+      let newlineIndex;
+      while ((newlineIndex = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, newlineIndex);
+        buffer = buffer.slice(newlineIndex + 1);
+        parseLine(line);
+      }
+    }
+  } catch (err) {
+    setStatus("Error: " + err.message, true);
+  } finally {
+    connectBtn.disabled = false;
+  }
+});
+
+window.addEventListener("resize", () => {
+  Object.values(metrics).forEach(drawSparkline);
+});
+</script>
+</body>
+</html>
