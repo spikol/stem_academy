@@ -15,9 +15,12 @@
     --gridline:       #e1e0d9;
     --border:         rgba(11,11,11,0.10);
     --accent:         #2a78d6;
-    --series-light:   #2a78d6;
-    --series-sound:   #eb6834;
-    --series-accel:   #1baf7a;
+    --series-x:       #2a78d6;
+    --series-y:       #eb6834;
+    --series-z:       #1baf7a;
+    --series-temp:    #eda100;
+    --series-btn-a:   #e87ba4;
+    --series-btn-b:   #008300;
     --danger:         #e34948;
   }
   @media (prefers-color-scheme: dark) {
@@ -31,9 +34,12 @@
       --gridline:       #2c2c2a;
       --border:         rgba(255,255,255,0.10);
       --accent:         #3987e5;
-      --series-light:   #3987e5;
-      --series-sound:   #d95926;
-      --series-accel:   #199e70;
+      --series-x:       #3987e5;
+      --series-y:       #d95926;
+      --series-z:       #199e70;
+      --series-temp:    #c98500;
+      --series-btn-a:   #d55181;
+      --series-btn-b:   #008300;
       --danger:         #e66767;
     }
   }
@@ -47,9 +53,12 @@
     --gridline:       #2c2c2a;
     --border:         rgba(255,255,255,0.10);
     --accent:         #3987e5;
-    --series-light:   #3987e5;
-    --series-sound:   #d95926;
-    --series-accel:   #199e70;
+    --series-x:       #3987e5;
+    --series-y:       #d95926;
+    --series-z:       #199e70;
+    --series-temp:    #c98500;
+    --series-btn-a:   #d55181;
+    --series-btn-b:   #008300;
     --danger:         #e66767;
   }
 
@@ -62,7 +71,7 @@
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     padding: 24px 16px 48px;
   }
-  main { max-width: 720px; margin: 0 auto; }
+  main { max-width: 760px; margin: 0 auto; }
 
   h1 { font-size: 1.4rem; margin: 0 0 4px; }
   p.subtitle { color: var(--text-secondary); margin: 0 0 20px; font-size: 0.95rem; }
@@ -84,10 +93,19 @@
 
   #status { font-size: 0.9rem; color: var(--text-secondary); }
   #status.error { color: var(--danger); }
+  #unsupported {
+    display: none;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: var(--danger);
+    font-size: 0.9rem;
+  }
 
   .tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
     margin-bottom: 20px;
   }
@@ -116,6 +134,11 @@
   .tile .value .unit { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
   .tile canvas { display: block; width: 100%; height: 40px; margin-top: 10px; }
 
+  .tile.state .value { display: flex; align-items: center; gap: 8px; font-size: 1.3rem; }
+  .tile.state .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--gridline); flex: none; }
+  .tile.state.pressed .dot { background: var(--series-btn-a); }
+  .tile.state.held .dot { background: var(--series-btn-a); box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-btn-a) 30%, transparent); }
+
   .table-toggle {
     background: transparent;
     border: none;
@@ -125,13 +148,14 @@
     padding: 0;
     cursor: pointer;
   }
-  #tableWrap { display: none; margin-top: 12px; }
+  #tableWrap { display: none; margin-top: 12px; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   th, td {
     text-align: right;
     padding: 6px 8px;
     border-bottom: 1px solid var(--gridline);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   th:first-child, td:first-child { text-align: left; }
   th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -141,60 +165,102 @@
 <body>
 <main>
   <h1>Micro:bit Bluetooth Stream</h1>
-  <p class="subtitle">Plots light, sound, and acceleration streamed from a micro:bit, relayed through the local <code>bridge.py</code> process over a WebSocket.</p>
+  <p class="subtitle">Acceleration, temperature, and button state streamed from a micro:bit over Web Bluetooth, using the official micro:bit Bluetooth services.</p>
+
+  <div id="unsupported">
+    This browser doesn't support Web Bluetooth. Use desktop Chrome or Edge.
+  </div>
 
   <div class="controls">
-    <button id="connect">Connect to Bridge</button>
+    <button id="connect">Connect Micro:bit</button>
     <span id="status">Status: Disconnected</span>
   </div>
 
   <div class="tiles">
     <div class="tile">
-      <div class="label"><span class="swatch" style="background:var(--series-light)"></span>Light level</div>
-      <div class="value"><span id="lightValue">–</span><span class="unit">/ 255</span></div>
-      <canvas id="lightChart"></canvas>
+      <div class="label"><span class="swatch" style="background:var(--series-x)"></span>Accel X</div>
+      <div class="value"><span id="xValue">–</span><span class="unit">mg</span></div>
+      <canvas id="xChart"></canvas>
     </div>
     <div class="tile">
-      <div class="label"><span class="swatch" style="background:var(--series-sound)"></span>Sound level</div>
-      <div class="value"><span id="soundValue">–</span><span class="unit">/ 255</span></div>
-      <canvas id="soundChart"></canvas>
+      <div class="label"><span class="swatch" style="background:var(--series-y)"></span>Accel Y</div>
+      <div class="value"><span id="yValue">–</span><span class="unit">mg</span></div>
+      <canvas id="yChart"></canvas>
     </div>
     <div class="tile">
-      <div class="label"><span class="swatch" style="background:var(--series-accel)"></span>Acceleration</div>
-      <div class="value"><span id="accelValue">–</span><span class="unit">mg</span></div>
-      <canvas id="accelChart"></canvas>
+      <div class="label"><span class="swatch" style="background:var(--series-z)"></span>Accel Z</div>
+      <div class="value"><span id="zValue">–</span><span class="unit">mg</span></div>
+      <canvas id="zChart"></canvas>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="swatch" style="background:var(--series-temp)"></span>Temperature</div>
+      <div class="value"><span id="tempValue">–</span><span class="unit">°C</span></div>
+      <canvas id="tempChart"></canvas>
+    </div>
+    <div class="tile state" id="btnATile">
+      <div class="label"><span class="swatch" style="background:var(--series-btn-a)"></span>Button A</div>
+      <div class="value"><span class="dot"></span><span id="btnAValue">Not pressed</span></div>
+    </div>
+    <div class="tile state" id="btnBTile">
+      <div class="label"><span class="swatch" style="background:var(--series-btn-b)"></span>Button B</div>
+      <div class="value"><span class="dot"></span><span id="btnBValue">Not pressed</span></div>
     </div>
   </div>
 
   <button class="table-toggle" id="tableToggle">Show data table</button>
   <div id="tableWrap">
     <table>
-      <thead><tr><th>Time</th><th>Light</th><th>Sound</th><th>Accel (mg)</th></tr></thead>
+      <thead><tr><th>Time</th><th>X</th><th>Y</th><th>Z</th><th>Temp (°C)</th><th>Btn A</th><th>Btn B</th></tr></thead>
       <tbody id="tableBody"></tbody>
     </table>
   </div>
 </main>
 
 <script>
-// bridge.py relays parsed micro:bit readings here as JSON — see that
-// file's docstring for why this hops through a Python process instead of
-// connecting to the micro:bit directly with Web Bluetooth.
-const WS_URL = "ws://localhost:8765";
+// Official BBC micro:bit Bluetooth Profile services — all notify-capable,
+// unlike the custom UART TX characteristic we tried first (which this
+// specific board's compiled firmware rejected notification subscriptions
+// on). See bluetooth_stream/README.md for the full story.
+const ACCEL_SERVICE = "e95d0753-251d-470a-a062-fa1922dfa9a8";
+const ACCEL_DATA = "e95dca4b-251d-470a-a062-fa1922dfa9a8"; // Notify, Read — X,Y,Z int16 LE, milli-g
+
+const TEMP_SERVICE = "e95d6100-251d-470a-a062-fa1922dfa9a8";
+const TEMP_DATA = "e95d9250-251d-470a-a062-fa1922dfa9a8"; // Notify, Read — int8, °C
+
+const BUTTON_SERVICE = "e95d9882-251d-470a-a062-fa1922dfa9a8";
+const BUTTON_A_DATA = "e95dda90-251d-470a-a062-fa1922dfa9a8"; // Notify, Read — uint8: 0 not pressed, 1 pressed, 2 long press
+const BUTTON_B_DATA = "e95dda91-251d-470a-a062-fa1922dfa9a8";
+
+const BUTTON_STATE_LABELS = { 0: "Not pressed", 1: "Pressed", 2: "Held" };
+const BUTTON_STATE_CLASSES = { 0: "", 1: "pressed", 2: "held" };
 
 const HISTORY_LEN = 60;
 const TABLE_MAX_ROWS = 30;
 
 const connectBtn = document.getElementById("connect");
 const statusEl = document.getElementById("status");
+const unsupportedEl = document.getElementById("unsupported");
 const tableToggle = document.getElementById("tableToggle");
 const tableWrap = document.getElementById("tableWrap");
 const tableBody = document.getElementById("tableBody");
+const btnATile = document.getElementById("btnATile");
+const btnBTile = document.getElementById("btnBTile");
+const btnAValueEl = document.getElementById("btnAValue");
+const btnBValueEl = document.getElementById("btnBValue");
 
 const metrics = {
-  light: { valueEl: document.getElementById("lightValue"), canvas: document.getElementById("lightChart"), color: "--series-light", history: [] },
-  sound: { valueEl: document.getElementById("soundValue"), canvas: document.getElementById("soundChart"), color: "--series-sound", history: [] },
-  accel: { valueEl: document.getElementById("accelValue"), canvas: document.getElementById("accelChart"), color: "--series-accel", history: [] },
+  x: { valueEl: document.getElementById("xValue"), canvas: document.getElementById("xChart"), color: "--series-x", history: [] },
+  y: { valueEl: document.getElementById("yValue"), canvas: document.getElementById("yChart"), color: "--series-y", history: [] },
+  z: { valueEl: document.getElementById("zValue"), canvas: document.getElementById("zChart"), color: "--series-z", history: [] },
+  temp: { valueEl: document.getElementById("tempValue"), canvas: document.getElementById("tempChart"), color: "--series-temp", history: [] },
 };
+
+let lastRow = { x: "", y: "", z: "", temp: "", btnA: "Not pressed", btnB: "Not pressed" };
+
+if (!("bluetooth" in navigator)) {
+  unsupportedEl.style.display = "block";
+  connectBtn.disabled = true;
+}
 
 function setStatus(text, isError = false) {
   statusEl.textContent = "Status: " + text;
@@ -250,10 +316,10 @@ function drawSparkline(metric) {
   ctx.fill();
 }
 
-function addTableRow(light, sound, accel) {
+function addTableRow() {
   const row = document.createElement("tr");
   const time = new Date().toLocaleTimeString();
-  row.innerHTML = `<td class="t">${time}</td><td>${light}</td><td>${sound}</td><td>${accel}</td>`;
+  row.innerHTML = `<td class="t">${time}</td><td>${lastRow.x}</td><td>${lastRow.y}</td><td>${lastRow.z}</td><td>${lastRow.temp}</td><td>${lastRow.btnA}</td><td>${lastRow.btnB}</td>`;
   tableBody.insertBefore(row, tableBody.firstChild);
   while (tableBody.children.length > TABLE_MAX_ROWS) {
     tableBody.removeChild(tableBody.lastChild);
@@ -266,53 +332,85 @@ tableToggle.addEventListener("click", () => {
   tableToggle.textContent = showing ? "Show data table" : "Hide data table";
 });
 
-function handleReading(light, sound, accel) {
-  metrics.light.valueEl.textContent = light;
-  metrics.sound.valueEl.textContent = sound;
-  metrics.accel.valueEl.textContent = accel;
-
-  pushHistory(metrics.light, light);
-  pushHistory(metrics.sound, sound);
-  pushHistory(metrics.accel, accel);
-
-  drawSparkline(metrics.light);
-  drawSparkline(metrics.sound);
-  drawSparkline(metrics.accel);
-
-  addTableRow(light, sound, accel);
+function handleAccel(x, y, z) {
+  metrics.x.valueEl.textContent = x;
+  metrics.y.valueEl.textContent = y;
+  metrics.z.valueEl.textContent = z;
+  pushHistory(metrics.x, x);
+  pushHistory(metrics.y, y);
+  pushHistory(metrics.z, z);
+  drawSparkline(metrics.x);
+  drawSparkline(metrics.y);
+  drawSparkline(metrics.z);
+  lastRow.x = x; lastRow.y = y; lastRow.z = z;
+  addTableRow();
+  setStatus("Streaming");
 }
 
-connectBtn.addEventListener("click", () => {
+function handleTemp(temp) {
+  metrics.temp.valueEl.textContent = temp;
+  pushHistory(metrics.temp, temp);
+  drawSparkline(metrics.temp);
+  lastRow.temp = temp;
+  setStatus("Streaming");
+}
+
+function handleButton(which, state) {
+  const label = BUTTON_STATE_LABELS[state] ?? "Unknown";
+  const cls = BUTTON_STATE_CLASSES[state] ?? "";
+  const tile = which === "A" ? btnATile : btnBTile;
+  const valueEl = which === "A" ? btnAValueEl : btnBValueEl;
+  tile.classList.remove("pressed", "held");
+  if (cls) tile.classList.add(cls);
+  valueEl.textContent = label;
+  if (which === "A") lastRow.btnA = label; else lastRow.btnB = label;
+  setStatus("Streaming");
+}
+
+async function subscribe(server, serviceUuid, charUuid, handler) {
+  const service = await server.getPrimaryService(serviceUuid);
+  const char = await service.getCharacteristic(charUuid);
+  char.addEventListener("characteristicvaluechanged", (event) => handler(event.target.value));
+  await char.startNotifications();
+}
+
+connectBtn.addEventListener("click", async () => {
   connectBtn.disabled = true;
-  setStatus("Connecting to bridge...");
+  try {
+    setStatus("Requesting device...");
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "BBC micro:bit" }],
+      optionalServices: [ACCEL_SERVICE, TEMP_SERVICE, BUTTON_SERVICE],
+    });
 
-  const ws = new WebSocket(WS_URL);
+    device.addEventListener("gattserverdisconnected", () => {
+      setStatus("Disconnected", true);
+      connectBtn.disabled = false;
+    });
 
-  ws.addEventListener("open", () => {
-    setStatus("Connected — waiting for micro:bit data...");
-  });
+    setStatus("Connecting to GATT server...");
+    const server = await device.gatt.connect();
 
-  ws.addEventListener("message", (event) => {
-    let data;
-    try {
-      data = JSON.parse(event.data);
-    } catch (err) {
-      return;
-    }
-    if (typeof data.light !== "number" || typeof data.sound !== "number" || typeof data.accel !== "number") return;
-    setStatus("Streaming");
-    handleReading(data.light, data.sound, data.accel);
-  });
+    setStatus("Subscribing to Accelerometer service...");
+    await subscribe(server, ACCEL_SERVICE, ACCEL_DATA, (dv) => {
+      handleAccel(dv.getInt16(0, true), dv.getInt16(2, true), dv.getInt16(4, true));
+    });
 
-  ws.addEventListener("close", () => {
-    setStatus("Disconnected from bridge", true);
+    setStatus("Subscribing to Temperature service...");
+    await subscribe(server, TEMP_SERVICE, TEMP_DATA, (dv) => {
+      handleTemp(dv.getInt8(0));
+    });
+
+    setStatus("Subscribing to Button service...");
+    await subscribe(server, BUTTON_SERVICE, BUTTON_A_DATA, (dv) => handleButton("A", dv.getUint8(0)));
+    await subscribe(server, BUTTON_SERVICE, BUTTON_B_DATA, (dv) => handleButton("B", dv.getUint8(0)));
+
+    setStatus("Connected to " + (device.name || "micro:bit") + " — waiting for first reading...");
+  } catch (err) {
+    setStatus(statusEl.textContent.replace(/^Status: /, "") + " -> FAILED: " + err.message, true);
+  } finally {
     connectBtn.disabled = false;
-  });
-
-  ws.addEventListener("error", () => {
-    setStatus("Couldn't reach bridge.py on " + WS_URL + " — is it running?", true);
-    connectBtn.disabled = false;
-  });
+  }
 });
 
 window.addEventListener("resize", () => {
