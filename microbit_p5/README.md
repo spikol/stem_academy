@@ -22,8 +22,17 @@ pattern as the other pages in this repo.
   active character, switched by pressing a button on the micro:bit itself.
 - Every ~2 seconds (or immediately when the persona switches), the current
   temperature/motion reading plus the active persona are sent to Claude,
-  which responds with one in-character sentence shown in the narration
-  panel.
+  which replies with two things: a **mood** (one of `calm`, `excited`,
+  `alarmed`, `sleepy` — Claude picks based on the readings and the
+  persona) and one in-character **sentence**. The sentence goes in the
+  narration panel; the mood drives the little 8-bit sprite above it —
+  tinting its color and adding a small icon (sparkle/exclamation/zzz).
+  The animation itself is just a 2-frame idle sway, always running; only
+  the mood and the character shape (houseplant vs. monkey) come from live
+  data.
+- A **"Show character animation"** checkbox in the controls row toggles
+  the sprite panel on/off — it's decorative, not load-bearing, so it's
+  fine to hide for a plainer view.
 - The Claude-calling code (key storage, budget cap, usage tracking) is
   unchanged from the original webcam sketch — it doesn't care where the
   reading or persona came from.
@@ -80,6 +89,13 @@ hardware or firmware problem. Full story in
   are all in the `<script>` block in `index.html` — edit `PERSONAS` there
   to add a third button-triggered character (the micro:bit only has two
   buttons, so a third would need a gesture or combo instead of a press).
+  Adding one also means adding a matching entry to `SPRITES` (a 12x12 grid
+  per idle frame — `1` is the mood-tinted main color, `2` is a fixed
+  secondary color, `0` is transparent).
+- The mood vocabulary (`MOODS` in `index.html`) is intentionally a small,
+  fixed set — the prompt asks Claude to reply in a strict `mood: ...` /
+  `text: ...` two-line format specifically so this stays a simple regex
+  match rather than needing JSON parsing or a schema.
 - Light and sound levels aren't part of the official micro:bit Bluetooth
   Profile (only a custom UART stream can send those, and that proved
   unreliable on this hardware), which is why this version narrates

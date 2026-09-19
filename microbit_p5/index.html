@@ -134,6 +134,36 @@
   #personaTile.b .dot { background: var(--persona-b); }
   .tile .hint { margin-top: 4px; font-size: 0.75rem; color: var(--text-muted); }
 
+  .sprite-panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .sprite-panel canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 96px;
+    height: 96px;
+    flex: none;
+    background: var(--page);
+    border-radius: 8px;
+  }
+  .sprite-panel .sprite-caption { font-size: 0.85rem; color: var(--text-secondary); }
+  .sprite-panel .sprite-mood {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .anim-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); margin-left: auto; }
+
   .narration-panel {
     background: var(--surface-1);
     border: 1px solid var(--border);
@@ -224,6 +254,7 @@
   <div class="controls">
     <button id="connect">Connect Micro:bit</button>
     <span id="status">Status: Disconnected</span>
+    <label class="anim-toggle"><input type="checkbox" id="animToggle" checked /> Show character animation</label>
   </div>
 
   <div class="tiles">
@@ -241,6 +272,14 @@
       <div class="label"><span class="swatch" style="background:var(--persona-a)"></span>Persona</div>
       <div class="value"><span class="dot"></span><span id="personaValue">Nervous houseplant</span></div>
       <div class="hint">Button A = houseplant · Button B = monkey</div>
+    </div>
+  </div>
+
+  <div class="sprite-panel" id="spritePanel">
+    <canvas id="spriteCanvas" width="12" height="12"></canvas>
+    <div>
+      <div class="sprite-caption" id="spriteCaption">The houseplant is watching.</div>
+      <span class="sprite-mood" id="spriteMood">calm</span>
     </div>
   </div>
 
@@ -278,7 +317,7 @@
   <button class="table-toggle" id="tableToggle">Show data table</button>
   <div id="tableWrap">
     <table>
-      <thead><tr><th>Time</th><th>Temp (°C)</th><th>Motion</th><th>Persona</th><th>Narration</th></tr></thead>
+      <thead><tr><th>Time</th><th>Temp (°C)</th><th>Motion</th><th>Persona</th><th>Mood</th><th>Narration</th></tr></thead>
       <tbody id="tableBody"></tbody>
     </table>
   </div>
@@ -313,6 +352,147 @@ const MOTION_LEVELS = [
   { max: Infinity, label: "shaking" },
 ];
 
+// ---------- 8-bit sprite (mood comes from Claude's own response) ----------
+
+// 12x12 pixel grids, two idle frames each (a subtle sway/bounce) — 1 is the
+// character's main color (mood-tinted), 2 is a fixed secondary color
+// (plant pot / monkey face), 0 is transparent.
+const SPRITES = {
+  A: { // houseplant
+    secondary: "#8a5a34",
+    frames: [
+      [
+        "000011110000",
+        "000111111000",
+        "001111111100",
+        "011111111110",
+        "001111111100",
+        "000111111000",
+        "000001100000",
+        "000001100000",
+        "000022220000",
+        "000222222000",
+        "000222222000",
+        "000022220000",
+      ],
+      [
+        "000001111000",
+        "000011111100",
+        "000111111110",
+        "001111111111",
+        "000111111110",
+        "000011111100",
+        "000001100000",
+        "000001100000",
+        "000022220000",
+        "000222222000",
+        "000222222000",
+        "000022220000",
+      ],
+    ],
+  },
+  B: { // small monkey
+    secondary: "#e8c39e",
+    frames: [
+      [
+        "000011110000",
+        "000111111000",
+        "001122211000",
+        "011122211100",
+        "011111111100",
+        "001111111000",
+        "000111111000",
+        "001111111100",
+        "011111111110",
+        "011100011100",
+        "001100011000",
+        "011000001100",
+      ],
+      [
+        "000111111000",
+        "001111111100",
+        "011122211100",
+        "011122211110",
+        "001111111100",
+        "000111111000",
+        "000111111000",
+        "001111111100",
+        "011111111110",
+        "001100011000",
+        "011000001100",
+        "000000000000",
+      ],
+    ],
+  },
+};
+
+// The only moods Claude is allowed to return — keeps parsing trivial and
+// the sprite tinting predictable.
+const MOODS = {
+  calm:    { color: null, icon: null },         // null = persona's own default color
+  excited: { color: "#eda100", icon: "sparkle" },
+  alarmed: { color: "#e34948", icon: "alarm" },
+  sleepy:  { color: "#6ec6ff", icon: "sleep" },
+};
+
+const ANIM_FRAME_MS = 600;
+
+const spritePanel = document.getElementById("spritePanel");
+const spriteCanvas = document.getElementById("spriteCanvas");
+const spriteCtx = spriteCanvas.getContext("2d");
+const spriteCaption = document.getElementById("spriteCaption");
+const spriteMoodEl = document.getElementById("spriteMood");
+const animToggle = document.getElementById("animToggle");
+
+let currentMood = "calm";
+let spriteFrame = 0;
+
+function drawSprite() {
+  if (!animToggle.checked) return;
+  const sprite = SPRITES[currentPersona];
+  const mood = MOODS[currentMood] || MOODS.calm;
+  const mainColor = mood.color || getComputedStyle(document.documentElement)
+    .getPropertyValue(currentPersona === "A" ? "--persona-a" : "--persona-b").trim();
+
+  spriteCtx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+  const grid = sprite.frames[spriteFrame % sprite.frames.length];
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < grid[row].length; col++) {
+      const cell = grid[row][col];
+      if (cell === "0") continue;
+      spriteCtx.fillStyle = cell === "1" ? mainColor : sprite.secondary;
+      spriteCtx.fillRect(col, row, 1, 1);
+    }
+  }
+
+  // Small mood icon in the top-right corner, drawn in the same 12x12 space.
+  if (mood.icon === "sparkle") {
+    spriteCtx.fillStyle = "#ffd166";
+    spriteCtx.fillRect(10, 0, 1, 1);
+    spriteCtx.fillRect(9, 1, 1, 1);
+    spriteCtx.fillRect(11, 1, 1, 1);
+  } else if (mood.icon === "alarm") {
+    spriteCtx.fillStyle = "#e34948";
+    spriteCtx.fillRect(10, 0, 1, 2);
+    spriteCtx.fillRect(10, 3, 1, 1);
+  } else if (mood.icon === "sleep") {
+    spriteCtx.fillStyle = "#6ec6ff";
+    spriteCtx.fillRect(9, 0, 1, 1);
+    spriteCtx.fillRect(10, 1, 1, 1);
+    spriteCtx.fillRect(11, 2, 1, 1);
+  }
+}
+
+animToggle.addEventListener("change", () => {
+  spritePanel.style.display = animToggle.checked ? "flex" : "none";
+  if (animToggle.checked) drawSprite();
+});
+
+setInterval(() => {
+  spriteFrame = (spriteFrame + 1) % 2;
+  drawSprite();
+}, ANIM_FRAME_MS);
+
 const AUTO_READ_MS = 2000;
 const HISTORY_LEN = 60;
 const TABLE_MAX_ROWS = 30;
@@ -336,7 +516,7 @@ let currentPersona = "A";
 let prevVec = null;
 let latestTemp = null;
 let latestMotion = 0;
-let lastRow = { temp: "", motion: "", persona: PERSONAS.A.label, narration: "" };
+let lastRow = { temp: "", motion: "", persona: PERSONAS.A.label, mood: "calm", narration: "" };
 let lastReadAt = 0;
 let busy = false;
 
@@ -402,7 +582,7 @@ function drawSparkline(metric) {
 function addTableRow() {
   const row = document.createElement("tr");
   const time = new Date().toLocaleTimeString();
-  row.innerHTML = `<td class="t">${time}</td><td>${lastRow.temp}</td><td>${lastRow.motion}</td><td>${lastRow.persona}</td><td>${lastRow.narration}</td>`;
+  row.innerHTML = `<td class="t">${time}</td><td>${lastRow.temp}</td><td>${lastRow.motion}</td><td>${lastRow.persona}</td><td>${lastRow.mood}</td><td>${lastRow.narration}</td>`;
   tableBody.insertBefore(row, tableBody.firstChild);
   while (tableBody.children.length > TABLE_MAX_ROWS) {
     tableBody.removeChild(tableBody.lastChild);
@@ -426,6 +606,7 @@ function setPersona(key) {
   personaTile.classList.add(persona.cls);
   personaValueEl.textContent = persona.label;
   lastRow.persona = persona.label;
+  drawSprite();
   requestNarrationNow();
 }
 
@@ -620,16 +801,30 @@ async function requestNarrationNow() {
     `You are ${persona.system}. You will be given raw micro:bit sensor ` +
     `readings: a temperature in Celsius with a plain-language label, and ` +
     `an acceleration-based motion score (higher = more recent movement) ` +
-    `with its own plain-language label. Respond with exactly one short ` +
-    `in-character sentence narrating what's happening around the ` +
-    `micro:bit right now. No preamble, no labels, just the sentence.`;
+    `with its own plain-language label. Reply with exactly two lines, ` +
+    `nothing else:\n` +
+    `mood: one word from calm, excited, alarmed, sleepy — pick whichever ` +
+    `best matches how you'd feel given these readings and your character.\n` +
+    `text: one short in-character sentence narrating what's happening ` +
+    `around the micro:bit right now. No preamble, no labels beyond the ` +
+    `"mood:"/"text:" prefixes themselves.`;
 
   const message = `temperature: ${latestTemp}°C (${tLabel}), motion: ${latestMotion} (${mLabel})`;
 
   try {
-    const text = await claudeRequest(system, message, 80);
+    const raw = await claudeRequest(system, message, 100);
+    const match = raw.match(/mood:\s*(\w+)\s*\n+text:\s*([\s\S]+)/i);
+    const mood = match && MOODS[match[1].toLowerCase()] ? match[1].toLowerCase() : "calm";
+    const text = match ? match[2].trim() : raw.trim();
+
+    currentMood = mood;
+    spriteMoodEl.textContent = mood;
+    spriteCaption.textContent = text;
+    drawSprite();
+
     narrationEl.textContent = text;
     lastRow.narration = text;
+    lastRow.mood = mood;
   } catch (err) {
     narrationEl.textContent = `Error: ${err.message}`;
     lastRow.narration = `Error: ${err.message}`;
@@ -647,6 +842,8 @@ setInterval(() => {
     requestNarrationNow();
   }
 }, 500);
+
+drawSprite();
 </script>
 </body>
 </html>
