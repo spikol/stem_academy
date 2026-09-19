@@ -6,6 +6,10 @@ didactic transposition and AI literacy, using micro:bit, Teachable Machine,
 and Claude as hands-on tools. See [ABOUT.md](ABOUT.md) for the background
 and motivation behind the workshops.
 
+**Live site:** [spikol.github.io/stem_academy](https://spikol.github.io/stem_academy/) —
+the interactive tools below, running directly in the browser against a
+physical micro:bit, no install required.
+
 ## Repo layout
 
 | Path | What it is |
@@ -23,11 +27,16 @@ and motivation behind the workshops.
 
 - **AI bridge** (micro:bit asks Claude a yes/no question over USB): see
   [`backend/README.md`](backend/README.md) and
-  [`frontend/README.md`](frontend/README.md).
+  [`frontend/README.md`](frontend/README.md)
+  ([live](https://spikol.github.io/stem_academy/frontend/) — needs
+  `backend/` deployed and `SERVER_URL` pointed at it first).
 - **Live sensor dashboard**: see [`serial_stream/README.md`](serial_stream/README.md)
   (USB) or [`bluetooth_stream/README.md`](bluetooth_stream/README.md)
-  (Bluetooth) — flash the matching MakeCode script, serve the page, connect.
-- **Micro:bit mood narrator**: see [`microbit_p5/README.md`](microbit_p5/README.md) —
+  (Bluetooth,
+  [live](https://spikol.github.io/stem_academy/bluetooth_stream/)) — flash
+  the matching MakeCode script, serve the page, connect.
+- **Micro:bit mood narrator**: see [`microbit_p5/README.md`](microbit_p5/README.md)
+  ([live](https://spikol.github.io/stem_academy/microbit_p5/)) —
   Bluetooth-connected dashboard plus a Claude narration panel, persona
   switched by the board's buttons.
 - **Teachable Machine + micro:bit** (no code in this repo, browser-based):
