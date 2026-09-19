@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEM Academy — Playful AI with IoT</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --border:         rgba(11,11,11,0.10);
+    --accent:         #2a78d6;
+    --slot-1:         #2a78d6;
+    --slot-2:         #eb6834;
+    --slot-3:         #1baf7a;
+    --slot-4:         #eda100;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --border:         rgba(255,255,255,0.10);
+      --accent:         #3987e5;
+      --slot-1:         #3987e5;
+      --slot-2:         #d95926;
+      --slot-3:         #199e70;
+      --slot-4:         #c98500;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --border:         rgba(255,255,255,0.10);
+    --accent:         #3987e5;
+    --slot-1:         #3987e5;
+    --slot-2:         #d95926;
+    --slot-3:         #199e70;
+    --slot-4:         #c98500;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 40px 16px 56px;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+
+  h1 { font-size: 1.6rem; margin: 0 0 6px; }
+  p.subtitle { color: var(--text-secondary); margin: 0 0 32px; font-size: 1rem; max-width: 640px; }
+
+  h2.section { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 32px 0 12px; }
+  h2.section:first-of-type { margin-top: 0; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  a.card {
+    display: block;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.card:hover { border-color: var(--accent); }
+  .card .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+  .card .title { font-weight: 600; font-size: 1.05rem; display: flex; align-items: center; }
+  .card .desc { margin-top: 6px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.45; }
+  .card .tag { margin-top: 10px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  footer { margin-top: 40px; font-size: 0.85rem; color: var(--text-muted); }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>STEM Academy — Playful AI with IoT</h1>
+  <p class="subtitle">Interactive tools from the "Why Playful AI with IoT and Generative AI?" workshop series — DIKU / Center for Digital Education. Each connects to a physical micro:bit in your browser, no install required. See <a href="ABOUT.md">ABOUT.md</a> for the background.</p>
+
+  <h2 class="section">Live sensor dashboards</h2>
+  <div class="cards">
+    <a class="card" href="serial_stream/">
+      <div class="title"><span class="dot" style="background:var(--slot-1)"></span>Serial Stream</div>
+      <div class="desc">Light level, sound level, and acceleration, live — connected over USB.</div>
+      <div class="tag">Web Serial · Chrome/Edge</div>
+    </a>
+    <a class="card" href="bluetooth_stream/">
+      <div class="title"><span class="dot" style="background:var(--slot-2)"></span>Bluetooth Stream</div>
+      <div class="desc">Acceleration, temperature, and button state, live — connected wirelessly.</div>
+      <div class="tag">Web Bluetooth · Chrome/Edge</div>
+    </a>
+  </div>
+
+  <h2 class="section">AI-connected</h2>
+  <div class="cards">
+    <a class="card" href="microbit_p5/">
+      <div class="title"><span class="dot" style="background:var(--slot-3)"></span>Micro:bit Mood Narrator</div>
+      <div class="desc">Claude narrates the room in character from temperature and motion — press a button on the board to switch persona.</div>
+      <div class="tag">Web Bluetooth · bring your own API key</div>
+    </a>
+    <a class="card" href="frontend/">
+      <div class="title"><span class="dot" style="background:var(--slot-4)"></span>Micro:bit AI Bridge</div>
+      <div class="desc">Ask Claude a yes/no question from the micro:bit's buttons, answer shown on the LED matrix.</div>
+      <div class="tag">Web Serial · needs backend/</div>
+    </a>
+  </div>
+
+  <footer>
+    Source: <a href="https://github.com/spikol/stem_academy">github.com/spikol/stem_academy</a>
+  </footer>
+</main>
+</body>
+</html>
