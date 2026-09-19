@@ -125,5 +125,16 @@ https://teachablemachine.withgoogle.com/train
 
 ---
 <!-- _class: top-title -->
+# Model Select
+![bg 60%](../images/mod_select.png)
+
+---
+<!-- _class: top-title -->
+# Pairing
+![bg 60%](../images/pair.png)
+
+---
+
+<!-- _class: top-title -->
 # Lofi APP
 ![bg 60%](../images/app_yes.png)
