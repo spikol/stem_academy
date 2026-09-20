@@ -138,3 +138,70 @@ https://teachablemachine.withgoogle.com/train
 <!-- _class: top-title -->
 # Lofi APP
 ![bg 60%](../images/app_yes.png)
+
+---
+# Play Time<!--fit-->
+
+---
+# micro:bit & LLMs<!--fit-->
+
+---
+<!-- _class: top-title -->
+# micro:bit code
+
+![bg 60%](../images/llm_code.png)
+
+---
+<!-- _class: top-title -->
+### LLM page https://spikol.github.io/stem_academy/
+
+![bg 40%](../images/lmm_page.png)
+
+---
+<!-- _class: top-title -->
+# LLM page
+![bg 60%](../images/llm_connect.png)
+
+---
+<!-- _class: top-title -->
+# How It Works
+
+<div style="display:flex; justify-content:center; margin-top:30px;">
+<svg width="960" height="293" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+  </defs>
+
+  <rect x="10" y="75" width="170" height="70" rx="10" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="95" y="117" text-anchor="middle" font-size="18" fill="#111">micro:bit</text>
+
+  <rect x="275" y="75" width="170" height="70" rx="10" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="360" y="117" text-anchor="middle" font-size="18" fill="#111">Website</text>
+
+  <rect x="540" y="75" width="170" height="70" rx="10" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="625" y="110" text-anchor="middle" font-size="18" fill="#111">Claude</text>
+  <text x="625" y="130" text-anchor="middle" font-size="18" fill="#111">API</text>
+
+  <line x1="180" y1="95" x2="273" y2="95" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="226" y="80" text-anchor="middle" font-size="12" fill="#555">sensor data</text>
+  <text x="226" y="65" text-anchor="middle" font-size="11" fill="#777">USB or Bluetooth</text>
+
+  <line x1="445" y1="95" x2="538" y2="95" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="491" y="80" text-anchor="middle" font-size="12" fill="#555">prompt</text>
+  <text x="491" y="65" text-anchor="middle" font-size="11" fill="#777">HTTPS</text>
+
+  <line x1="538" y1="130" x2="447" y2="130" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="491" y="150" text-anchor="middle" font-size="12" fill="#555">response</text>
+
+  <line x1="273" y1="130" x2="182" y2="130" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="226" y="150" text-anchor="middle" font-size="11" fill="#555">shown on screen /</text>
+  <text x="226" y="165" text-anchor="middle" font-size="11" fill="#555">sent back to board</text>
+</svg>
+</div>
+
+---
+<!-- _class: top-title -->
+# API Key - See PADLET
+![bg 50%](../images/llm_key.png)

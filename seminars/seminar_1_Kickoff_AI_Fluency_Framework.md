@@ -170,4 +170,4 @@ table {
 
 </div>
 
-*MAGIC is a concept fron Ken Friss Larsen
+*MAGIC is a concept by Ken Friis Larsen, UCPH, DIKU
