@@ -8,13 +8,14 @@ and motivation behind the workshops.
 
 **Live site:** [spikol.github.io/stem_academy](https://spikol.github.io/stem_academy/) —
 the interactive tools below, running directly in the browser against a
-physical micro:bit, no install required.
+physical micro:bit, no install required. The page also links the seminar
+slide PDFs and the "Is This AI?" card deck.
 
 ## Repo layout
 
 | Path | What it is |
 |---|---|
-| [`seminars/`](seminars/) | Marp slide decks for each session (intro, AI fluency kickoff, didactic transposition) |
+| [`seminars/`](seminars/) | Marp slide decks for each session (intro, AI fluency kickoff, didactic transposition, micro:bit AI), plus the "Is This AI?" card deck — PDFs linked from the live site |
 | [`org_notes/`](org_notes/) | Planning notes and drafts behind the seminars |
 | [`images/`](images/) | Images used across the slide decks |
 | [`backend/`](backend/) + [`frontend/`](frontend/) | Micro:bit → Claude AI bridge: a Flask backend that forwards prompts from a micro:bit-connected browser to the Claude API, deployed on PythonAnywhere |
